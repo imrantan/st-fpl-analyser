@@ -16,6 +16,7 @@ st.sidebar.header('Filters')
 
 # Choose League
 league_id = st.sidebar.text_input('League ID', placeholder="Insert digits only")
+st.sidebar.write('1033088 - TakGooner\n723575 - IHG 24/25')
 
 # Validate League ID
 valid_league_id = league_id.isdigit()
