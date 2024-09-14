@@ -32,7 +32,14 @@ def run_api_extraction(game_week, league_id):
     # 1. CREATE the dim_Teams table
     # Get information about the current league standings
     print(BASE_URL+f'leagues-classic/{LEAGUE_ID}/standings/')
-    df_standings = requests.get(BASE_URL+f'leagues-classic/{LEAGUE_ID}/standings/').json()
+    response = requests.get(BASE_URL+f'leagues-classic/{LEAGUE_ID}/standings/')
+
+    if response.status_code == 200:
+        df_standings = response.json()
+    else:
+         print(f"Failed to fetch data. Status code: {response.status_code}")
+         print(response.text)
+         return False
 
     # get the league Name
     LEAGUE_NAME = df_standings['league']['name']
