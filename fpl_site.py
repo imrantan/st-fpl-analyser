@@ -71,6 +71,8 @@ if 'Full_Selection_Data' in st.session_state:
                 "y": y_label
             }   
         )
+        # Update the color of the bars
+        fig.update_traces(marker_color='#00ff87')
         # Update layout to sort bars in descending order
         fig.update_layout(yaxis={'categoryorder': 'total ascending'})
         return fig
@@ -121,7 +123,7 @@ if 'Full_Selection_Data' in st.session_state:
 
         total_points_upto_gameweek = int(df_hist_teams_upto_gw_entryname['points'].sum())
 
-        st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
+        st.subheader(f'Overall Results for Game Week {int(selected_game_week)}')
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Points for the Week", total_points_for_gameweek)
@@ -141,6 +143,8 @@ if 'Full_Selection_Data' in st.session_state:
         col3.metric("Point Deductions for the Week", total_deduction_for_gameweek)
         col4.metric("Total Point Deductions", total_deduction_upto_gameweek)
 
+        # Add a horizontal dividing line
+        st.markdown("---")
 
         # Display player information
         first_eleven = df_full_select_for_gw_entryname[df_full_select_for_gw_entryname['position']<=11]
@@ -176,9 +180,12 @@ if 'Full_Selection_Data' in st.session_state:
                                               'Name', 'Position', 'Direction', 'Player ID', 'GW Points']
             st.dataframe(transfers_for_the_week, hide_index=True, use_container_width=True)
 
+        # Add a horizontal dividing line
+        st.markdown("---")
+
+        st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
 
         # Display additional statistics
-        st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Goals", int(first_eleven['goals_scored'].sum()))
         col2.metric("Total Assists", int(first_eleven['assists'].sum()))
@@ -186,6 +193,9 @@ if 'Full_Selection_Data' in st.session_state:
 
         # Create a bar chart of points by player
         fig_1 = px.bar(show_first_eleven_info, x='Name', y='Points Earned', title='Points Earned by Player')
+        # Update the color of the bars
+        fig_1.update_traces(marker_color='#00ff87')
+        fig_1.update_layout(xaxis_title=None) # remove x-axis title
         # Update layout to sort bars in descending order
         fig_1.update_layout(xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig_1)
@@ -206,6 +216,9 @@ if 'Full_Selection_Data' in st.session_state:
                                                  'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
         first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
         fig_2 = px.bar(first_eleven_cumul, x='Name', y='Points Earned', title='Cumulative Points Earned by Player')
+        # Update the color of the bars
+        fig_2.update_traces(marker_color='#00ff87')
+        fig_2.update_layout(xaxis_title=None) # remove x-axis title
         fig_2.update_layout(xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig_2)
 
