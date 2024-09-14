@@ -15,8 +15,10 @@ page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview"])
 st.sidebar.header('Filters')
 
 # Choose League
+st.sidebar.write('Popular League IDs:')
+st.sidebar.write('TakGooner - 1033088')
+st.sidebar.write('IHG 24/25 - 723575')
 league_id = st.sidebar.text_input('League ID', placeholder="Insert digits only")
-st.sidebar.write('1033088 - TakGooner\n723575 - IHG 24/25')
 
 # Validate League ID
 valid_league_id = league_id.isdigit()
@@ -318,6 +320,9 @@ if 'Full_Selection_Data' in st.session_state:
         # Display the table with rank changes using st.markdown
         st.markdown(team_performance_html, unsafe_allow_html=True)
 
+        # Add a horizontal dividing line
+        st.markdown("---")
+
         # Line chart of team performance across game weeks
         st.subheader(f'Team Performance across Game Weeks')
         y_axis = st.selectbox('Y-axis', ['GW Points', 'Total Points', 'Team Value', 'Bank', 'No. of GW Transfers'], index=0)
@@ -332,7 +337,7 @@ if 'Full_Selection_Data' in st.session_state:
         overall_performance.columns = ['Event', 'Team','GW Points', 'Total Points', 'Bank', 'Team Value', 'No. of GW Transfers', 
                                        'Cost of Transfers', 'Points on Bench', 'Rank']
 
-        chart_title = f"{y_axis.capitalize()} Earned by Teams across Game Weeks"
+        chart_title = f"{y_axis.capitalize()} by Teams across Game Weeks"
         fig_2 = px.line(overall_performance, 
                         x='Event', 
                         y=y_axis,
@@ -442,4 +447,4 @@ if 'Full_Selection_Data' in st.session_state:
                                                             
 
 else:
-    st.write("Please click 'Update' to load the data.")
+    st.write("Key in a League ID. Then press the 'Update' button.")
