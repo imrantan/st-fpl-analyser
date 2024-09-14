@@ -248,7 +248,6 @@ def run_api_extraction(game_week, league_id):
 
         # We can proceed to perform a join to combine these 2 tables.
 
-        # print(len(All_TeamSelections))
         # perform left join
         Full_Selection_Data = pd.merge(left=All_TeamSelections,
                             right=All_Player_GW_data,
@@ -256,7 +255,6 @@ def run_api_extraction(game_week, league_id):
                             right_on=['game_week', 'player_id'],
                             how='left',
                             suffixes=('_TeamSelections', '_PlayerGW'))
-        # print(len(Full_Selection_Data))
 
         # Now let's bring in the information of the different teams in the league
         Full_Selection_Data = pd.merge(left=dim_Teams,
@@ -419,6 +417,14 @@ def run_api_extraction(game_week, league_id):
 
     # now we append
     df_Transfers_IN_OUT = pd.concat([df_Transfer_Ins, df_Transfer_Outs])
+
+    # Extract the points earned by the transferred players also
+    All_GW_data_lite = All_GW_data[['game_week', 'player_id', 'total_points']]
+    df_Transfers_IN_OUT = pd.merge(left=df_Transfers_IN_OUT,
+                                   right=All_GW_data_lite, 
+                                   left_on=['event', 'id_player'], 
+                                   right_on=['game_week','player_id'],
+                                   how='left')
 
     # Record the end time
     end_time = datetime.datetime.now()

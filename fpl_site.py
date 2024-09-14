@@ -9,7 +9,7 @@ st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["League Statistics", "Team Overview"])
+page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview"])
 
 # Sidebar filters
 st.sidebar.header('Filters')
@@ -34,7 +34,7 @@ if st.sidebar.button('Update'):
         league_id_int = int(league_id)
 
         # Display a spinner while the API call is being made
-        with st.spinner('Loading data...'):
+        with st.spinner('Loading data. This might take awhile...'):
             LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = fpl_data_extraction(league_id_int)
 
         # Store the data in session_state to persist it across interactions
@@ -58,8 +58,25 @@ if 'Full_Selection_Data' in st.session_state:
     game_weeks = sorted(df_Full_Selection_Data['game_week'].unique().astype(int))
     selected_game_week = st.sidebar.selectbox('Select Game Week', game_weeks, index=len(game_weeks)-1)
 
+    # Function to create horizontal bar charts using plotly
+    def plot_horizontal_bar(data, title, x_label, y_label):
+        fig = px.bar(
+            data_frame=data,
+            x=data.values, 
+            y=data.index, 
+            orientation='h',  # Horizontal bar chart
+            title=title,
+            labels={  # Customize axis labels
+                "x": x_label,
+                "y": y_label
+            }   
+        )
+        # Update layout to sort bars in descending order
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+        return fig
+
     # First Page - Team Overview
-    if page == "Team Overview":
+    if page == "Individual Team Overview":
         # Set up the Streamlit app
         st.title(f'Fantasy Premier League Stats - {LEAGUE_NAME}')
 
@@ -138,7 +155,7 @@ if 'Full_Selection_Data' in st.session_state:
                                                      & (df_Transfers_IN_OUT['event']==selected_game_week)]
         
         transfers_for_the_week = transfers_for_the_week[['date_clean','time_clean','Transfer_ID', 'element_cost', 
-                                                         'name', 'web_name', 'singular_name', 'Direction']].sort_values(by='Transfer_ID')
+                                                         'name', 'web_name', 'singular_name', 'Direction', 'id_player', 'total_points']].sort_values(by='Transfer_ID')
 
         # Display additional statistics
         st.subheader(f'Team Selection for Game Week {int(selected_game_week)}')
@@ -155,7 +172,8 @@ if 'Full_Selection_Data' in st.session_state:
             st.dataframe(show_bench_players_info, hide_index=True, use_container_width=True)
 
             st.subheader('Transfers')
-            transfers_for_the_week.columns = ['Date', 'Time', 'Transfer ID', 'Cost', 'Club', 'Name', 'Position', 'Direction']
+            transfers_for_the_week.columns = ['Date', 'Time', 'Transfer ID', 'Cost', 'Club', 
+                                              'Name', 'Position', 'Direction', 'Player ID', 'GW Points']
             st.dataframe(transfers_for_the_week, hide_index=True, use_container_width=True)
 
 
@@ -203,23 +221,6 @@ if 'Full_Selection_Data' in st.session_state:
         # Subheader for more statistics
         st.subheader('More Statistics')
 
-        # Function to create horizontal bar charts using plotly
-        def plot_horizontal_bar(data, title, x_label, y_label):
-            fig = px.bar(
-                data_frame=data,
-                x=data.values, 
-                y=data.index, 
-                orientation='h',  # Horizontal bar chart
-                title=title,
-                labels={  # Customize axis labels
-                    "x": x_label,
-                    "y": y_label
-                }   
-            )
-            # Update layout to sort bars in descending order
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            return fig
-
         bar1, bar2, bar3 = st.columns(3)
 
         # Plot Most Captained Players
@@ -239,7 +240,7 @@ if 'Full_Selection_Data' in st.session_state:
         
 
     # Second Page - League Statistics
-    elif page == "League Statistics":
+    elif page == "Overall League":
         st.title(f'League Statistics Overview - {LEAGUE_NAME}')
 
         # sort and filter data for the latest game week
@@ -257,15 +258,15 @@ if 'Full_Selection_Data' in st.session_state:
         team_performance = df_hist_Teams_data_sorted[df_hist_Teams_data_sorted['event'] == selected_game_week].sort_values(by=['league_rank'])
 
         # Create a column for arrow symbols based on rank change
-        team_performance['Rank Change'] = np.where(team_performance['rank_change'] < 0, '↑',
-                                                   np.where(team_performance['rank_change'] > 0, '↓', '-'))
+        team_performance['Rank Change'] = np.where(team_performance['rank_change'] < 0, '▲',
+                                                   np.where(team_performance['rank_change'] > 0, '▼', '–'))
 
         # Add color for the arrows (green for up, red for down, grey for no change)
-        team_performance['Rank Change'] = np.where(team_performance['Rank Change'] == '↑', 
-                                                   '<span style="color:green">↑</span>', 
-                                                   np.where(team_performance['Rank Change'] == '↓', 
-                                                            '<span style="color:red">↓</span>', 
-                                                            '<span style="color:grey">-</span>'))
+        team_performance['Rank Change'] = np.where(team_performance['Rank Change'] == '▲', 
+                                                   '<span style="color:green">▲</span>', 
+                                                   np.where(team_performance['Rank Change'] == '▼', 
+                                                            '<span style="color:red">▼</span>', 
+                                                            '<span style="color:grey">–</span>'))
 
         # Select columns to display (including Rank Change)
         team_performance = team_performance[['entry_name','points','total_points', 'bank','value','event_transfers', 
@@ -338,6 +339,94 @@ if 'Full_Selection_Data' in st.session_state:
         )
 
         st.plotly_chart(fig_2)
+
+         # Filter the data for the selected game week and selected entry name
+        df_full_select_for_gw = df_Full_Selection_Data[(df_Full_Selection_Data['game_week'] == selected_game_week)]
+                                                           
+        df_full_select_upto_gw = df_Full_Selection_Data[(df_Full_Selection_Data['game_week'] <= selected_game_week)]                      
+        
+        df_hist_teams_for_gw = df_hist_Teams_data[(df_hist_Teams_data['event'] == selected_game_week)] 
+                                                          
+        df_hist_teams_upto_gw = df_hist_Teams_data[(df_hist_Teams_data['event'] <= selected_game_week)]
+
+        # Calculate statistics up to the selected game week
+        first_eleven_cumul = df_full_select_upto_gw[df_full_select_upto_gw['position']<=11]
+        # bench_players_cumul = df_full_select_upto_gw[df_full_select_upto_gw['position']>11]
+
+        first_eleven_cumul = first_eleven_cumul[['position', 'web_name', 'name', 
+                                                 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
+
+        # show some barcharts metrics across all the teams in the league
+        # Most captained players
+        most_captained = first_eleven_cumul[first_eleven_cumul['Captain']]['Name'].value_counts().nlargest(5)
+
+        # Most selected player (by web_name)
+        most_selected_web = first_eleven_cumul['Name'].value_counts().nlargest(5)
+
+        # Most selected Club
+        most_selected_name = first_eleven_cumul['Club'].value_counts().nlargest(5)
+
+        # Subheader for more statistics
+        st.subheader(f'League Statistics up to GW{selected_game_week}')
+
+        bar1, bar2, bar3 = st.columns(3)
+
+        # Plot Most Captained Players
+        with bar1:
+            fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
+            st.plotly_chart(fig1)
+
+        # Plot Most Selected Players by Web Name
+        with bar2:
+            fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
+            st.plotly_chart(fig2)
+
+        # Plot Most Selected Players by Name
+        with bar3:
+            fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
+            st.plotly_chart(fig3)
+
+
+        # For the Game week 
+        # Calculate statistics up to the selected game week
+        first_eleven = df_full_select_for_gw[df_full_select_for_gw['position']<=11]
+        # bench_players_cumul = df_full_select_upto_gw[df_full_select_upto_gw['position']>11]
+
+        first_eleven = first_eleven[['position', 'web_name', 'name', 
+                                                 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        first_eleven.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
+
+        # show some barcharts metrics across all the teams in the league
+        # Most captained players
+        most_captained = first_eleven[first_eleven['Captain']]['Name'].value_counts().nlargest(5)
+
+        # Most selected player (by web_name)
+        most_selected_web = first_eleven['Name'].value_counts().nlargest(5)
+
+        # Most selected Club
+        most_selected_name = first_eleven['Club'].value_counts().nlargest(5)
+
+        # Subheader for more statistics
+        st.subheader(f'League Statistics for the GW{selected_game_week}')
+
+        bar1, bar2, bar3 = st.columns(3)
+
+        # Plot Most Captained Players
+        with bar1:
+            fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
+            st.plotly_chart(fig1)
+
+        # Plot Most Selected Players by Web Name
+        with bar2:
+            fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
+            st.plotly_chart(fig2)
+
+        # Plot Most Selected Players by Name
+        with bar3:
+            fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
+            st.plotly_chart(fig3)
+                                                            
 
 else:
     st.write("Please click 'Update' to load the data.")
