@@ -337,12 +337,13 @@ def run_api_extraction(game_week, league_id):
                                             suffixes=('_Team', '_PlayerIn'))
 
     # 3. Retrieve the element_out Player info
-    All_Transfers = pd.merge(left=All_Transfers,
-                                            right=player_data,
-                                            left_on='element_out',
-                                            right_on='id_player',
-                                            how='left',
-                                            suffixes=('_PlayerIn', '_PlayerOut'))
+    All_Transfers = pd.merge(   left=All_Transfers,
+                                right=player_data,
+                                left_on='element_out',
+                                right_on='id_player',
+                                how='left',
+                                suffixes=('_PlayerIn', '_PlayerOut')
+                                )
 
     # ensure that only the latest gameweek gets transferred
     All_Transfers = All_Transfers[All_Transfers['event']<=MAX_GW]

@@ -51,6 +51,7 @@ if st.sidebar.button('Update'):
 if 'Full_Selection_Data' in st.session_state:
     df_Full_Selection_Data = st.session_state['Full_Selection_Data']
     df_hist_Teams_data = st.session_state['hist_Teams_data']
+    df_Transfers_IN_OUT = st.session_state['df_Transfers_IN_OUT']
     LEAGUE_NAME = st.session_state['LEAGUE_NAME']
 
     # Game Week filter
@@ -79,19 +80,44 @@ if 'Full_Selection_Data' in st.session_state:
         df_hist_teams_upto_gw_entryname = df_hist_Teams_data[(df_hist_Teams_data['event'] <= selected_game_week) 
                                                             & (df_hist_Teams_data['entry_name'] == selected_entry_name)]
         
+        # retrieve prior week data
+        df_hist_teams_for_prior_gw_entryname = df_hist_Teams_data[(df_hist_Teams_data['event'] == selected_game_week-1) 
+                                                           & (df_hist_Teams_data['entry_name'] == selected_entry_name)]
+        
 
         # Display total points
         total_points_for_gameweek = int(df_hist_teams_for_gw_entryname['points'].sum())
-        total_points_upto_gameweek = int(df_hist_teams_upto_gw_entryname['points'].sum())
-        st.subheader(f'Total Points for the Week: {total_points_for_gameweek} | Total Cumulative Points: {total_points_upto_gameweek}')
 
+        if len(df_hist_teams_for_prior_gw_entryname) != 0:
+            total_points_for_prior_gameweek = int(df_hist_teams_for_prior_gw_entryname['points'].sum())
+        else:
+            total_points_for_prior_gameweek = 0
+
+        # calculate week on week change %
+        points_change = total_points_for_gameweek - total_points_for_prior_gameweek
+
+        if total_points_for_prior_gameweek==0:
+            points_change_percentage = 'N.A.'
+        else:
+            points_change_percentage = (points_change/total_points_for_prior_gameweek)*100
+            points_change_percentage = f'{points_change_percentage:.1f}%'
+
+        total_points_upto_gameweek = int(df_hist_teams_upto_gw_entryname['points'].sum())
+
+        st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Total Points for the Week", total_points_for_gameweek)
+        col2.metric("Total Cumulative Points", total_points_upto_gameweek)
+        col3.metric("Current Week vs Prior Week Points", points_change)
+        col4.metric("Current Week vs Prior Week % Change", points_change_percentage)
+        
         # Transfers made
         total_transfers_for_gameweek = int(df_hist_teams_for_gw_entryname['event_transfers'].sum())
         total_transfers_upto_gameweek = int(df_hist_teams_upto_gw_entryname['event_transfers'].sum())
         total_deduction_for_gameweek = int(df_hist_teams_for_gw_entryname['event_transfers_cost'].sum())
         total_deduction_upto_gameweek = int(df_hist_teams_upto_gw_entryname['event_transfers_cost'].sum())
 
-        st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("No. of Transfers for the Week", total_transfers_for_gameweek)
         col2.metric("Total Transfers Made", total_transfers_upto_gameweek)
@@ -102,19 +128,36 @@ if 'Full_Selection_Data' in st.session_state:
         # Display player information
         first_eleven = df_full_select_for_gw_entryname[df_full_select_for_gw_entryname['position']<=11]
         bench_players = df_full_select_for_gw_entryname[df_full_select_for_gw_entryname['position']>11]
-        show_first_eleven_info = first_eleven[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned']]
-        show_bench_players_info = bench_players[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned']]
+        show_first_eleven_info = first_eleven[['position', 'web_name', 'name', 
+                                               'plural_name_short', 'total_points', 'points_earned']]
+        show_bench_players_info = bench_players[['position', 'web_name', 'name', 
+                                                 'plural_name_short', 'total_points', 'points_earned']]
+        
+        # show the transfers made
+        transfers_for_the_week = df_Transfers_IN_OUT[(df_Transfers_IN_OUT['entry_name']==selected_entry_name) 
+                                                     & (df_Transfers_IN_OUT['event']==selected_game_week)]
+        
+        transfers_for_the_week = transfers_for_the_week[['date_clean','time_clean','Transfer_ID', 'element_cost', 
+                                                         'name', 'web_name', 'singular_name', 'Direction']].sort_values(by='Transfer_ID')
 
         # Display additional statistics
         st.subheader(f'Team Selection for Game Week {int(selected_game_week)}')
         col_a, col_b = st.columns(2)
+
         with col_a:
             st.subheader('First Eleven')
-            st.dataframe(show_first_eleven_info, hide_index=True)
+            show_first_eleven_info.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned']
+            st.dataframe(show_first_eleven_info, hide_index=True, use_container_width=True, height=420)
 
         with col_b:
             st.subheader('Bench')
-            st.dataframe(show_bench_players_info, hide_index=True)
+            show_bench_players_info.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned']
+            st.dataframe(show_bench_players_info, hide_index=True, use_container_width=True)
+
+            st.subheader('Transfers')
+            transfers_for_the_week.columns = ['Date', 'Time', 'Transfer ID', 'Cost', 'Club', 'Name', 'Position', 'Direction']
+            st.dataframe(transfers_for_the_week, hide_index=True, use_container_width=True)
+
 
         # Display additional statistics
         st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
@@ -124,7 +167,9 @@ if 'Full_Selection_Data' in st.session_state:
         col3.metric("Clean Sheets", int(first_eleven['clean_sheets'].sum()))
 
         # Create a bar chart of points by player
-        fig_1 = px.bar(show_first_eleven_info, x='web_name', y='points_earned', title='Points Earned by Player')
+        fig_1 = px.bar(show_first_eleven_info, x='Name', y='Points Earned', title='Points Earned by Player')
+        # Update layout to sort bars in descending order
+        fig_1.update_layout(xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig_1)
 
         # Calculate statistics up to the selected game week
@@ -139,26 +184,59 @@ if 'Full_Selection_Data' in st.session_state:
         col6.metric("Clean Sheets", int(first_eleven_cumul['clean_sheets'].sum()))
 
         # Create a bar chart of cumulative points
-        fig_2 = px.bar(first_eleven_cumul, x='web_name', y='points_earned', title='Cumulative Points Earned by Player')
+        first_eleven_cumul = first_eleven_cumul[['position', 'web_name', 'name', 
+                                                 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
+        fig_2 = px.bar(first_eleven_cumul, x='Name', y='Points Earned', title='Cumulative Points Earned by Player')
+        fig_2.update_layout(xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig_2)
 
-        # Most captained player
-        most_captained = first_eleven_cumul[first_eleven_cumul['is_captain']]['web_name'].value_counts().nlargest(5)
+        # Most captained players
+        most_captained = first_eleven_cumul[first_eleven_cumul['Captain']]['Name'].value_counts().nlargest(5)
 
         # Most selected player (by web_name)
-        most_selected_web = first_eleven_cumul['web_name'].value_counts().nlargest(5)
+        most_selected_web = first_eleven_cumul['Name'].value_counts().nlargest(5)
 
         # Most selected player (by name)
-        most_selected_name = first_eleven_cumul['name'].value_counts().nlargest(5)
+        most_selected_name = first_eleven_cumul['Club'].value_counts().nlargest(5)
 
-        # Display raw data for verification
+        # Subheader for more statistics
         st.subheader('More Statistics')
-        st.write("Most Captained Players:")
-        st.write(most_captained)
-        st.write("Most Selected Players:")
-        st.write(most_selected_web)
-        st.write("Most Selected Clubs:")
-        st.write(most_selected_name)
+
+        # Function to create horizontal bar charts using plotly
+        def plot_horizontal_bar(data, title, x_label, y_label):
+            fig = px.bar(
+                data_frame=data,
+                x=data.values, 
+                y=data.index, 
+                orientation='h',  # Horizontal bar chart
+                title=title,
+                labels={  # Customize axis labels
+                    "x": x_label,
+                    "y": y_label
+                }   
+            )
+            # Update layout to sort bars in descending order
+            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+            return fig
+
+        bar1, bar2, bar3 = st.columns(3)
+
+        # Plot Most Captained Players
+        with bar1:
+            fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
+            st.plotly_chart(fig1)
+
+        # Plot Most Selected Players by Web Name
+        with bar2:
+            fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
+            st.plotly_chart(fig2)
+
+        # Plot Most Selected Players by Name
+        with bar3:
+            fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
+            st.plotly_chart(fig3)
+        
 
     # Second Page - League Statistics
     elif page == "League Statistics":
