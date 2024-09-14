@@ -55,15 +55,30 @@ This Streamlit application provides a comprehensive dashboard for analyzing Fant
 
 ## Dependencies
 
-- streamlit
-- pandas
-- plotly
-- numpy
-- API_Extraction (custom module for FPL data retrieval)
+numpy==1.26.4
+plotly==5.23.0
+pandas==2.2.1
+tqdm==4.66.5
+pytz==2024.1
 
-## Data Source
+## Data Source and API Extraction
 
-This dashboard uses the official Fantasy Premier League API to fetch data. The `API_Extraction` module (not included in this repository) is responsible for making API calls and initial data processing.
+This dashboard uses the official Fantasy Premier League API to fetch data. The `API_Extraction` module is responsible for making API calls and initial data processing. Here's an overview of its functionality:
+
+- Retrieves data up to a specified game week for a given league ID
+- Fetches league standings, team selections, player statistics, and transfer information
+- Processes and combines data from multiple API endpoints
+- Performs data validation and error checking
+- Handles time zone conversion for transfer data
+
+The module returns the following key data structures:
+- League name
+- Historical team data
+- Full player selection data
+- All transfers data
+- Processed transfers data (ins and outs)
+
+Note: The API extraction process may take some time, especially for larger leagues or when fetching data for many game weeks.
 
 ## Contributing
 
@@ -75,5 +90,4 @@ Contributions to improve the dashboard are welcome. Please feel free to submit a
 
 ## Disclaimer
 
-This project is not affiliated with or endorsed by the official Fantasy Premier League or Premier League. It is a fan-made tool intended for personal use and analysis.
-
+This project is not affiliated with or endorsed by the official Fantasy Premier League or Premier League. It is a fan-made tool intended for personal use and analysis. Please use responsibly and in accordance with the Fantasy Premier League's terms of service.
