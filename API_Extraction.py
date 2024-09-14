@@ -39,7 +39,6 @@ def run_api_extraction(game_week, league_id):
     else:
          print(f"Failed to fetch data. Status code: {response.status_code}")
          print(response.text)
-         return False
 
     # get the league Name
     LEAGUE_NAME = df_standings['league']['name']
