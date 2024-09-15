@@ -447,6 +447,5 @@ if 'Full_Selection_Data' in st.session_state:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
             st.plotly_chart(fig3)
                                                             
-
     else:
         st.write("Key in a League ID. Then press the 'Update' button.")

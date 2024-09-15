@@ -60,6 +60,8 @@ plotly==5.23.0
 pandas==2.2.1
 tqdm==4.66.5
 pytz==2024.1
+streamlit==1.37.1
+toml==0.10.2
 
 ## Data Source and API Extraction
 
@@ -79,6 +81,10 @@ The module returns the following key data structures:
 - Processed transfers data (ins and outs)
 
 Note: The API extraction process may take some time, especially for larger leagues or when fetching data for many game weeks.
+
+## Author
+
+This Fantasy Premier League Dashboard was created by Imran Tan. As an avid FPL player and data enthusiast, Imran developed this tool to help fellow FPL Managers gain deeper insights into their league performance and make data-driven decisions for their teams.
 
 ## Contributing
 
