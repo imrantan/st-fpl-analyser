@@ -26,7 +26,7 @@ league_id = st.sidebar.text_input('League ID', placeholder="Insert digits only")
 valid_league_id = league_id.isdigit()
 
 # Load the data with caching
-@st.cache_data
+@st.cache_data(ttl=43200)
 def fpl_data_extraction(league_id):
     LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = run_api_extraction(game_week=38, 
                                                                                                             league_id=league_id)
