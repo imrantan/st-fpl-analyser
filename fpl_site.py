@@ -336,12 +336,12 @@ if 'Full_Selection_Data' in st.session_state:
         overall_performance['bank'], overall_performance['value'] = overall_performance['bank']/10, overall_performance['value']/10
 
         # Rename columns for readability
-        overall_performance.columns = ['Event', 'Team','GW Points', 'Total Points', 'Bank', 'Team Value', 'No. of GW Transfers', 
+        overall_performance.columns = ['Game Week', 'Team','GW Points', 'Total Points', 'Bank', 'Team Value', 'No. of GW Transfers', 
                                     'Cost of Transfers', 'Points on Bench', 'Rank']
 
         chart_title = f"{y_axis.capitalize()} by Teams across Game Weeks"
         fig_2 = px.line(overall_performance, 
-                        x='Event', 
+                        x='Game Week', 
                         y=y_axis,
                         color='Team', 
                         title=chart_title)
