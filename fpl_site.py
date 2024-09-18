@@ -212,6 +212,68 @@ if 'Full_Selection_Data' in st.session_state:
         # Add a horizontal dividing line
         st.markdown("---")
 
+        # sort and filter data for the latest game week
+        overall_performance = df_hist_Teams_data[df_hist_Teams_data['event']<=selected_game_week]
+
+        # Select columns to display (including Rank Change)
+        overall_performance = overall_performance[['event', 'entry_name','points','total_points', 'bank','value','event_transfers', 
+                                            'event_transfers_cost','points_on_bench', 'league_rank']]
+        
+        overall_performance['bank'], overall_performance['value'] = overall_performance['bank']/10, overall_performance['value']/10
+
+        # Rename columns for readability
+        overall_performance.columns = ['Game Week', 'Team','GW Points', 'Total Points', 'Bank', 'Team Value', 'No. of GW Transfers', 
+                                    'Cost of Transfers', 'Points on Bench', 'Rank']
+
+        st.subheader(f'Performance Comparison')
+        y_axis = st.selectbox('Y-axis', ['GW Points', 'Total Points', 'Rank', 
+                                         'Team Value', 'Bank', 'No. of GW Transfers'], index=0)
+
+        chart_title = f"{y_axis} across Game Weeks"
+        fig_2 = px.line(overall_performance,
+                        x='Game Week', 
+                        y=y_axis,
+                        color='Team', 
+                        title=chart_title)
+        
+        # Highlight the selected entry by making others faint
+        for trace in fig_2.data:
+            if trace.name == selected_entry_name:
+                trace.update(line=dict(width=3, color='#00ff87'), opacity=0.8)  # Highlight selected team with thicker line
+            else:
+                trace.update(line=dict(width=1, color='lightgray'), opacity=0.5)  # Faint the other lines
+
+        # Add circle markers to the line chart
+        fig_2.update_traces(mode='lines+markers', marker=dict(symbol='circle'))
+
+        # Update y-axis layout conditionally based on the selected y-axis value
+        yaxis_config = {}
+
+        # Reverse the y-axis if 'Rank' is selected
+        if y_axis == 'Rank':
+             yaxis_config = {
+                'tickmode': 'linear',
+                'dtick': 1,  # Show ticks at every integer
+                'autorange': 'reversed'  # Reverse the y-axis for 'Rank'
+            }
+
+        # Make the chart static by disabling hover, zoom, and pan
+        fig_2.update_layout(
+            yaxis=yaxis_config,  # Apply y-axis configuration if needed
+            xaxis=dict(
+                tickmode='linear',
+                tick0=1,  # Start from game week 1
+                dtick=1   # Show every game week (1-week intervals)
+            ),
+            showlegend=False,
+            dragmode=False,   # Disable drag (zoom/pan)
+        )
+
+        st.plotly_chart(fig_2)
+
+        # Add a horizontal dividing line
+        st.markdown("---")
+
         st.subheader(f'Team Statistics for Game Week {int(selected_game_week)}')
 
         # Display additional statistics
@@ -351,8 +413,8 @@ if 'Full_Selection_Data' in st.session_state:
         st.markdown("---")
 
         # Line chart of team performance across game weeks
-        st.subheader(f'Team Performance across Game Weeks')
-        y_axis = st.selectbox('Y-axis', ['GW Points', 'Total Points', 'Team Value', 'Bank', 'No. of GW Transfers'], index=0)
+        st.subheader(f'Teams Performance across Game Weeks')
+        
 
         # Select columns to display (including Rank Change)
         overall_performance = overall_performance[['event', 'entry_name','points','total_points', 'bank','value','event_transfers', 
@@ -363,8 +425,10 @@ if 'Full_Selection_Data' in st.session_state:
         # Rename columns for readability
         overall_performance.columns = ['Game Week', 'Team','GW Points', 'Total Points', 'Bank', 'Team Value', 'No. of GW Transfers', 
                                     'Cost of Transfers', 'Points on Bench', 'Rank']
+        
+        y_axis = st.selectbox('Y-axis', ['GW Points', 'Total Points', 'Rank', 'Team Value', 'Bank', 'No. of GW Transfers'], index=0)
 
-        chart_title = f"{y_axis.capitalize()} by Teams across Game Weeks"
+        chart_title = f"{y_axis} by Teams across Game Weeks"
         fig_2 = px.line(overall_performance, 
                         x='Game Week', 
                         y=y_axis,
@@ -374,8 +438,20 @@ if 'Full_Selection_Data' in st.session_state:
         # Add circle markers to the line chart
         fig_2.update_traces(mode='lines+markers', marker=dict(symbol='circle'))
 
+        # Update y-axis layout conditionally based on the selected y-axis value
+        yaxis_config = {}
+
+        # Reverse the y-axis if 'Rank' is selected
+        if y_axis == 'Rank':
+             yaxis_config = {
+                'tickmode': 'linear',
+                'dtick': 1,  # Show ticks at every integer
+                'autorange': 'reversed'  # Reverse the y-axis for 'Rank'
+            }
+
         # Update the x-axis to show only integer ticks
         fig_2.update_layout(
+            yaxis=yaxis_config,
             xaxis=dict(
                 tickmode='linear',
                 tick0=1,  # Start from game week 1
