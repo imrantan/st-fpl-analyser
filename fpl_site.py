@@ -103,14 +103,19 @@ if 'Full_Selection_Data' in st.session_state:
 
     # First Page - Team Overview
     if page == "Individual Team Overview":
-        # Set up the Streamlit app
-        st.markdown(f'<p class="big-font">FPL Team Stats - {LEAGUE_NAME}</p>', unsafe_allow_html=True)
 
         # Entry Name filter
         entry_names = sorted(df_Full_Selection_Data['entry_name'].unique())
         selected_entry_name = st.sidebar.selectbox('Select Entry Name', entry_names)
 
-        st.header(f"{selected_entry_name} | Game Week {int(selected_game_week)}")
+        team_performance = df_hist_Teams_data[(df_hist_Teams_data['event']==selected_game_week) & (df_hist_Teams_data['entry_name']==selected_entry_name)]
+        
+        team_position = team_performance['league_rank'].iloc[0]
+
+        # Set up the Streamlit app
+        st.markdown(f'<p class="big-font">FPL Team Stats - {selected_entry_name}</p>', unsafe_allow_html=True)
+
+        st.header(f"{LEAGUE_NAME} - Rank {team_position} | Game Week {int(selected_game_week)}")
 
         # Filter the data for the selected game week and selected entry name
         df_full_select_for_gw_entryname = df_Full_Selection_Data[(df_Full_Selection_Data['game_week'] == selected_game_week) 
@@ -469,15 +474,15 @@ if 'Full_Selection_Data' in st.session_state:
                                                             
 else:
     # Header
-    st.markdown('<p class="big-font">Fantasy Premier League Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subheader">Dive deep into your league\'s performance</p>', unsafe_allow_html=True)
+    st.markdown('<p class="big-font">The Fantasy Premier League Analyser \u26BD</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subheader">Dive deep into your league\'s performance \U0001F4CA</p>', unsafe_allow_html=True)
     
     # Graphic - TBD
     # st.image("https://via.placeholder.com/800x400.png?text=FPL+Analysis+Dashboard", use_column_width=True)
     
     # Description
     st.write("""
-    Welcome to the Fantasy Premier League Analysis Dashboard! This tool allows you to:
+    Welcome to the Fantasy Premier League Analyser! This tool allows you to:
     
     - Analyze overall league performance
     - Dive into individual team statistics
