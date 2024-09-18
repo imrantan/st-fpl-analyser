@@ -31,7 +31,7 @@ st.markdown("""
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview"])
+page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview", "Home"])
 
 # Sidebar filters
 st.sidebar.header('Filters')
@@ -51,6 +51,32 @@ def fpl_data_extraction(league_id):
     LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = run_api_extraction(game_week=38, 
                                                                                                             league_id=league_id)
     return LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT
+
+def home():
+    """
+    This function creates the homepage.
+    """
+    # Header
+    st.markdown('<p class="big-font">The Fantasy Premier League Analyser \u26BD</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subheader">Dive deep into your league\'s performance \U0001F4CA</p>', unsafe_allow_html=True)
+    
+    # Graphic - TBD
+    # st.image("https://via.placeholder.com/800x400.png?text=FPL+Analysis+Dashboard", use_column_width=True)
+    
+    # Description
+    st.write("""
+    Welcome to the Fantasy Premier League Analyser! This tool allows you to:
+    
+    - Analyze overall league performance
+    - Dive into individual team statistics
+    - Track player selections and captain choices
+    - Monitor transfers and their impact
+    
+    To get started, enter your league ID in the sidebar and click 'Update'.
+    """)
+    
+    # Creator credit
+    st.markdown('<p class="creator">Created by Imran Tan</p>', unsafe_allow_html=True)
 
 # Update button
 if st.sidebar.button('Update'):
@@ -102,7 +128,10 @@ if 'Full_Selection_Data' in st.session_state:
         return fig
 
     # First Page - Team Overview
-    if page == "Individual Team Overview":
+    if page == "Home":
+        home() # show homepage
+
+    elif page == "Individual Team Overview":
 
         # Entry Name filter
         entry_names = sorted(df_Full_Selection_Data['entry_name'].unique())
@@ -549,24 +578,4 @@ if 'Full_Selection_Data' in st.session_state:
             st.plotly_chart(fig3)
                                                             
 else:
-    # Header
-    st.markdown('<p class="big-font">The Fantasy Premier League Analyser \u26BD</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subheader">Dive deep into your league\'s performance \U0001F4CA</p>', unsafe_allow_html=True)
-    
-    # Graphic - TBD
-    # st.image("https://via.placeholder.com/800x400.png?text=FPL+Analysis+Dashboard", use_column_width=True)
-    
-    # Description
-    st.write("""
-    Welcome to the Fantasy Premier League Analyser! This tool allows you to:
-    
-    - Analyze overall league performance
-    - Dive into individual team statistics
-    - Track player selections and captain choices
-    - Monitor transfers and their impact
-    
-    To get started, enter your league ID in the sidebar and click 'Update'.
-    """)
-    
-    # Creator credit
-    st.markdown('<p class="creator">Created by Imran Tan</p>', unsafe_allow_html=True)
+    home()
