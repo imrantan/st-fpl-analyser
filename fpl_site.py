@@ -7,7 +7,27 @@ import numpy as np  # Required for handling conditional operations
 # Your Streamlit app code here
 
 # Set page configuration as the first Streamlit command
-st.set_page_config(layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="The FPL Analyser")
+
+# Custom CSS for styling
+st.markdown("""
+    <style>
+    .big-font {
+        font-size:50px !important;
+        color: #00ff87;
+        font-weight: bold;
+    }
+    .subheader {
+        font-size:25px;
+        color: #ffffff;
+    }
+    .creator {
+        font-size:14px;
+        color: #cccccc;
+        font-style: italic;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
@@ -84,7 +104,7 @@ if 'Full_Selection_Data' in st.session_state:
     # First Page - Team Overview
     if page == "Individual Team Overview":
         # Set up the Streamlit app
-        st.title(f'Fantasy Premier League Stats - {LEAGUE_NAME}')
+        st.markdown(f'<p class="big-font">FPL Team Stats - {LEAGUE_NAME}</p>', unsafe_allow_html=True)
 
         # Entry Name filter
         entry_names = sorted(df_Full_Selection_Data['entry_name'].unique())
@@ -258,7 +278,7 @@ if 'Full_Selection_Data' in st.session_state:
 
     # Second Page - League Statistics
     elif page == "Overall League":
-        st.title(f'League Statistics Overview - {LEAGUE_NAME}')
+        st.markdown(f'<p class="big-font">League Statistics Overview - {LEAGUE_NAME}</p>', unsafe_allow_html=True)
 
         # sort and filter data for the latest game week
         overall_performance = df_hist_Teams_data[df_hist_Teams_data['event']<=selected_game_week]
@@ -447,5 +467,25 @@ if 'Full_Selection_Data' in st.session_state:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
             st.plotly_chart(fig3)
                                                             
-    else:
-        st.write("Key in a League ID. Then press the 'Update' button.")
+else:
+    # Header
+    st.markdown('<p class="big-font">Fantasy Premier League Analysis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subheader">Dive deep into your league\'s performance</p>', unsafe_allow_html=True)
+    
+    # Graphic - TBD
+    # st.image("https://via.placeholder.com/800x400.png?text=FPL+Analysis+Dashboard", use_column_width=True)
+    
+    # Description
+    st.write("""
+    Welcome to the Fantasy Premier League Analysis Dashboard! This tool allows you to:
+    
+    - Analyze overall league performance
+    - Dive into individual team statistics
+    - Track player selections and captain choices
+    - Monitor transfers and their impact
+    
+    To get started, enter your league ID in the sidebar and click 'Update'.
+    """)
+    
+    # Creator credit
+    st.markdown('<p class="creator">Created by Imran Tan</p>', unsafe_allow_html=True)
