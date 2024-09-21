@@ -371,7 +371,6 @@ if 'Full_Selection_Data' in st.session_state:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
             st.plotly_chart(fig3)
         
-
     # Second Page - League Statistics
     elif page == "Overall League":
         st.markdown(f'<p class="big-font">League Statistics Overview - {LEAGUE_NAME}</p>', unsafe_allow_html=True)
@@ -525,16 +524,25 @@ if 'Full_Selection_Data' in st.session_state:
         # Plot Most Captained Players
         with bar1:
             fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
+            fig1.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig1)
 
         # Plot Most Selected Players by Web Name
         with bar2:
             fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
+            fig2.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig2)
 
         # Plot Most Selected Players by Name
         with bar3:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
+            fig3.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig3)
 
 
@@ -565,16 +573,25 @@ if 'Full_Selection_Data' in st.session_state:
         # Plot Most Captained Players
         with bar1:
             fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
+            fig1.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig1)
 
         # Plot Most Selected Players by Web Name
         with bar2:
             fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
+            fig2.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig2)
 
         # Plot Most Selected Players by Name
         with bar3:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
+            fig3.update_layout(
+                dragmode=False   # Disable drag (zoom/pan)
+            )
             st.plotly_chart(fig3)
                                                             
 else:
