@@ -232,7 +232,8 @@ if 'Full_Selection_Data' in st.session_state:
                                                 'plural_name_short', 'total_points', 'points_earned']]
         
         # first 11 + bench
-        full_team_info = df_full_select_for_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned']]
+        full_team_info = df_full_select_for_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 
+                                                          'total_points', 'points_earned']]
         full_team_info.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned'] 
         
         # show the transfers made
@@ -335,10 +336,9 @@ if 'Full_Selection_Data' in st.session_state:
         col3.metric("Clean Sheets", int(first_eleven['clean_sheets'].sum()))
 
         # Create a slider for selecting TOP N
-        max_n = min(11, len(full_team_info))  # Adjust max_n as needed
         col1, col2, col3 = st.columns(3)
         with col1:
-            top_n = st.slider('Select TOP N players:', 1, max_n, 10)  # Default to 5
+            top_n = st.slider('Select TOP N players:', 1, 20, 10)  # Default to 5
 
         # Create a bar chart of points by player
         top_players = full_team_info.nlargest(top_n, 'Points Earned')
@@ -367,20 +367,22 @@ if 'Full_Selection_Data' in st.session_state:
         col5.metric("Total Assists", int(first_eleven_cumul['assists'].sum()))
         col6.metric("Clean Sheets", int(first_eleven_cumul['clean_sheets'].sum()))
 
-        # Create a bar chart of cumulative points
-        first_eleven_cumul = first_eleven_cumul[['position', 'web_name', 'name', 
-                                                'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
-        first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
-
         # Ranks all the players ever selected by their points contribution to the team
         # Filter DataFrame for TOP N players
-        top_players = full_team_cumul.nlargest(top_n, 'Points Earned')
+        # Group by 'Name' and aggregate by summing the 'Points Earned' for each player
+        agg_team_cumul = full_team_cumul.groupby('Name', as_index=False).agg({'Points Earned': 'sum'})
+        top_players = agg_team_cumul.nlargest(top_n, 'Points Earned')
         fig_2 = px.bar(top_players, x='Name', y='Points Earned', title=f'Top {top_n} Players By Cumulative Points Earned')
         # Update the color of the bars
         fig_2.update_traces(marker_color='#00ff87')
         fig_2.update_layout(xaxis_title=None) # remove x-axis title
         fig_2.update_layout(xaxis={'categoryorder': 'total descending'}, dragmode=barchart_dragmode)
         st.plotly_chart(fig_2)
+
+        # Analyse the first eleven only. players that made it to the game week team.
+        first_eleven_cumul = first_eleven_cumul[['position', 'web_name', 'name', 
+                                                'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
         
         # Most captained players
         most_captained = first_eleven_cumul[first_eleven_cumul['Captain']]['Name'].value_counts().nlargest(5)
