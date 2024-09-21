@@ -88,7 +88,7 @@ This Fantasy Premier League Dashboard was created by Imran Tan. As an avid FPL p
 
 ## Contributing
 
-Contributions to improve the dashboard are welcome. Please feel free to submit a Pull Request or open an Issue for any bugs or feature requests.
+Contributions to improve the dashboard are welcome. Please feel free to open an Issue for any bugs or feature requests.
 
 ## License
 
