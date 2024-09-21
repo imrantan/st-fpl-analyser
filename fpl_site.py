@@ -58,17 +58,17 @@ def home():
     This function creates the homepage.
     """
     # Header
-    st.markdown('<p class="big-font">The Fantasy Premier League Analyser \u26BD</p>', unsafe_allow_html=True)
-    st.markdown('<p class="subheader">Dive deep into your league\'s performance \U0001F4CA</p>', unsafe_allow_html=True)
+    st.markdown('<p class="big-font">The FPL Analyser \u26BD</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subheader">Dive deep into your fantasy premier league\'s performance \U0001F4CA</p>', unsafe_allow_html=True)
     
     # Graphic - TBD
     # st.image("https://via.placeholder.com/800x400.png?text=FPL+Analysis+Dashboard", use_column_width=True)
     
     # Description
     st.write("""
-    Welcome to the Fantasy Premier League Analyser! This tool allows you to:
+    Welcome to the FPL Analyser! This tool allows you to:
     
-    - Analyze overall league performance
+    - Analyze overall fantasy premier league performance
     - Dive into individual team statistics
     - Track player selections and captain choices
     - Monitor transfers and their impact
