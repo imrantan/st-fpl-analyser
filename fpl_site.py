@@ -338,7 +338,7 @@ if 'Full_Selection_Data' in st.session_state:
         max_n = min(11, len(full_team_info))  # Adjust max_n as needed
         col1, col2, col3 = st.columns(3)
         with col1:
-            top_n = st.slider('Select TOP N players:', 1, max_n, 15)  # Default to 5
+            top_n = st.slider('Select TOP N players:', 1, max_n, 10)  # Default to 5
 
         # Create a bar chart of points by player
         top_players = full_team_info.nlargest(top_n, 'Points Earned')
@@ -356,7 +356,8 @@ if 'Full_Selection_Data' in st.session_state:
         bench_players_cumul = df_full_select_upto_gw_entryname[df_full_select_upto_gw_entryname['position']>11]
 
         # full team
-        full_team_cumul = df_full_select_upto_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        full_team_cumul = df_full_select_upto_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 
+                                                            'total_points', 'points_earned', 'is_captain']]
         full_team_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
 
         # Display additional statistics
