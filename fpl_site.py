@@ -108,6 +108,7 @@ if 'Full_Selection_Data' in st.session_state:
     game_weeks = sorted(df_Full_Selection_Data['game_week'].unique().astype(int))
     selected_game_week = st.sidebar.selectbox('Select Game Week', game_weeks, index=len(game_weeks)-1)
 
+    barchart_dragmode = False # pre-set to control if the user can drag and pan the charts
     # Function to create horizontal bar charts using plotly
     def plot_horizontal_bar(data, title, x_label, y_label):
         fig = px.bar(
@@ -124,7 +125,8 @@ if 'Full_Selection_Data' in st.session_state:
         # Update the color of the bars
         fig.update_traces(marker_color='#00ff87')
         # Update layout to sort bars in descending order
-        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'},
+                          dragmode=barchart_dragmode,)
         return fig
 
     # First Page - Team Overview
@@ -211,6 +213,10 @@ if 'Full_Selection_Data' in st.session_state:
                                             'plural_name_short', 'total_points', 'points_earned']]
         show_bench_players_info = bench_players[['position', 'web_name', 'name', 
                                                 'plural_name_short', 'total_points', 'points_earned']]
+        
+        # first 11 + bench
+        full_team_info = df_full_select_for_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned']]
+        full_team_info.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned'] 
         
         # show the transfers made
         transfers_for_the_week = df_Transfers_IN_OUT[(df_Transfers_IN_OUT['entry_name']==selected_entry_name) 
@@ -311,18 +317,30 @@ if 'Full_Selection_Data' in st.session_state:
         col2.metric("Total Assists", int(first_eleven['assists'].sum()))
         col3.metric("Clean Sheets", int(first_eleven['clean_sheets'].sum()))
 
+        # Create a slider for selecting TOP N
+        max_n = min(11, len(full_team_info))  # Adjust max_n as needed
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            top_n = st.slider('Select TOP N players:', 1, max_n, 15)  # Default to 5
+
         # Create a bar chart of points by player
-        fig_1 = px.bar(show_first_eleven_info, x='Name', y='Points Earned', title='Points Earned by Player')
+        top_players = full_team_info.nlargest(top_n, 'Points Earned')
+        fig_1 = px.bar(top_players, x='Name', y='Points Earned', title=f'Top {top_n} Players By Points Earned')
         # Update the color of the bars
         fig_1.update_traces(marker_color='#00ff87')
         fig_1.update_layout(xaxis_title=None) # remove x-axis title
         # Update layout to sort bars in descending order
-        fig_1.update_layout(xaxis={'categoryorder': 'total descending'})
+        fig_1.update_layout(xaxis={'categoryorder': 'total descending'}, dragmode=barchart_dragmode)
         st.plotly_chart(fig_1)
+
 
         # Calculate statistics up to the selected game week
         first_eleven_cumul = df_full_select_upto_gw_entryname[df_full_select_upto_gw_entryname['position']<=11]
         bench_players_cumul = df_full_select_upto_gw_entryname[df_full_select_upto_gw_entryname['position']>11]
+
+        # full team
+        full_team_cumul = df_full_select_upto_gw_entryname[['position', 'web_name', 'name', 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
+        full_team_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
 
         # Display additional statistics
         st.subheader(f'Team Statistics up to Game Week {int(selected_game_week)}')
@@ -335,13 +353,17 @@ if 'Full_Selection_Data' in st.session_state:
         first_eleven_cumul = first_eleven_cumul[['position', 'web_name', 'name', 
                                                 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
         first_eleven_cumul.columns = ['No.', 'Name', 'Club', 'Position', 'GW Points', 'Points Earned', 'Captain']
-        fig_2 = px.bar(first_eleven_cumul, x='Name', y='Points Earned', title='Cumulative Points Earned by Player')
+
+        # Ranks all the players ever selected by their points contribution to the team
+        # Filter DataFrame for TOP N players
+        top_players = full_team_cumul.nlargest(top_n, 'Points Earned')
+        fig_2 = px.bar(top_players, x='Name', y='Points Earned', title=f'Top {top_n} Players By Cumulative Points Earned')
         # Update the color of the bars
         fig_2.update_traces(marker_color='#00ff87')
         fig_2.update_layout(xaxis_title=None) # remove x-axis title
-        fig_2.update_layout(xaxis={'categoryorder': 'total descending'})
+        fig_2.update_layout(xaxis={'categoryorder': 'total descending'}, dragmode=barchart_dragmode)
         st.plotly_chart(fig_2)
-
+        
         # Most captained players
         most_captained = first_eleven_cumul[first_eleven_cumul['Captain']]['Name'].value_counts().nlargest(5)
 
@@ -524,32 +546,22 @@ if 'Full_Selection_Data' in st.session_state:
         # Plot Most Captained Players
         with bar1:
             fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
-            fig1.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig1)
 
         # Plot Most Selected Players by Web Name
         with bar2:
             fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
-            fig2.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig2)
 
         # Plot Most Selected Players by Name
         with bar3:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
-            fig3.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig3)
 
 
         # For the Game week 
         # Calculate statistics up to the selected game week
         first_eleven = df_full_select_for_gw[df_full_select_for_gw['position']<=11]
-        # bench_players_cumul = df_full_select_upto_gw[df_full_select_upto_gw['position']>11]
 
         first_eleven = first_eleven[['position', 'web_name', 'name', 
                                                 'plural_name_short', 'total_points', 'points_earned', 'is_captain']]
@@ -573,25 +585,16 @@ if 'Full_Selection_Data' in st.session_state:
         # Plot Most Captained Players
         with bar1:
             fig1 = plot_horizontal_bar(most_captained, "Most Captained Players", "Count", "Player")
-            fig1.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig1)
 
         # Plot Most Selected Players by Web Name
         with bar2:
             fig2 = plot_horizontal_bar(most_selected_web, "Most Selected Players", "Count", "Player")
-            fig2.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig2)
 
         # Plot Most Selected Players by Name
         with bar3:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
-            fig3.update_layout(
-                dragmode=False   # Disable drag (zoom/pan)
-            )
             st.plotly_chart(fig3)
                                                             
 else:
