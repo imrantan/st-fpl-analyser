@@ -77,7 +77,7 @@ def home():
     """)
     
     # Creator credit
-    st.markdown('<p class="creator">Created by Imran Tan</p>', unsafe_allow_html=True)
+    st.markdown('<p class="creator">Created by https://github.com/imrantan</p>', unsafe_allow_html=True)
 
     # add some spacings
     st.markdown('', unsafe_allow_html=True)
