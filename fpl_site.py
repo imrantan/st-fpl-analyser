@@ -26,6 +26,7 @@ st.markdown("""
         color: #cccccc;
         font-style: italic;
     }
+            
     </style>
     """, unsafe_allow_html=True)
 
@@ -77,6 +78,22 @@ def home():
     
     # Creator credit
     st.markdown('<p class="creator">Created by Imran Tan</p>', unsafe_allow_html=True)
+
+    # add some spacings
+    st.markdown('', unsafe_allow_html=True)
+    st.markdown('', unsafe_allow_html=True)
+    st.markdown('', unsafe_allow_html=True)
+
+    # Add the disclaimer at the bottom with custom styling
+    st.markdown(
+        """
+        <div style="width: 100%; text-align: left; font-size: small; font-style: italic;">
+            Disclaimer: This project is not affiliated with or endorsed by the official Fantasy Premier League or Premier League. 
+            It is a fan-made tool intended for personal use and analysis. Please use responsibly and in accordance with the Fantasy Premier League's terms of service.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Update button
 if st.sidebar.button('Update'):
