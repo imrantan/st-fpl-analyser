@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from API_Extraction import run_api_extraction
+from fpl_functions import run_api_extraction, calculate_similarity_score, cleanse_similar_df, cleanse_onlydf
 import numpy as np  # Required for handling conditional operations
+import random
 
 # Your Streamlit app code here
 
@@ -14,6 +15,11 @@ st.markdown("""
     <style>
     .big-font {
         font-size:50px !important;
+        color: #00ff87;
+        font-weight: bold;
+    }
+    .medium-font {
+        font-size:32px !important;
         color: #00ff87;
         font-weight: bold;
     }
@@ -32,7 +38,7 @@ st.markdown("""
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview", "Home"])
+page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview", "Similarity Analyser", "Home"])
 
 # Sidebar filters
 st.sidebar.header('Filters')
@@ -72,6 +78,7 @@ def home():
     - Dive into individual team statistics
     - Track player selections and captain choices
     - Monitor transfers and their impact
+    - And try out the NEW Similarity Analyser!
     
     To get started, enter your league ID in the sidebar and click 'Update'.
     """)
@@ -362,10 +369,10 @@ if 'Full_Selection_Data' in st.session_state:
 
         # Display additional statistics
         st.subheader(f'Team Statistics up to Game Week {int(selected_game_week)}')
-        col4, col5, col6 = st.columns(3)
-        col4.metric("Total Goals", int(first_eleven_cumul['goals_scored'].sum()))
-        col5.metric("Total Assists", int(first_eleven_cumul['assists'].sum()))
-        col6.metric("Clean Sheets", int(first_eleven_cumul['clean_sheets'].sum()))
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Goals", int(first_eleven_cumul['goals_scored'].sum()))
+        col2.metric("Total Assists", int(first_eleven_cumul['assists'].sum()))
+        col3.metric("Clean Sheets", int(first_eleven_cumul['clean_sheets'].sum()))
 
         # Ranks all the players ever selected by their points contribution to the team
         # Filter DataFrame for TOP N players
@@ -616,6 +623,81 @@ if 'Full_Selection_Data' in st.session_state:
         with bar3:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
             st.plotly_chart(fig3)
-                                                            
+
+    elif page == "Similarity Analyser":
+
+        # Set up the Streamlit app
+        st.markdown(f'<p class="big-font">Similarity Analyser - Game Week {selected_game_week}</p>', unsafe_allow_html=True)
+        st.markdown(f'Select 2 teams and see how similar they are to each other.')
+
+        # Entry Name filter
+        entry_names = sorted(df_Full_Selection_Data['entry_name'].unique())
+
+        # Add custom CSS to center the content in each column
+        st.markdown(
+            """
+            <style>
+            .stSelectbox {
+                text-align: left;
+            }
+            div[data-testid="column"] {
+                display: flex;
+                flex-direction: column;
+                justify-content: left;
+                align-items: left;
+            }
+            </style>
+            """, unsafe_allow_html=True
+        )
+
+        col1, col2 = st.columns(2)        
+        with col1:
+            team_1 = st.selectbox('Select Team 1', entry_names)
+        with col2:
+            team_2 = st.selectbox('Select Team 2', entry_names)
+
+        # Add a horizontal dividing line
+        st.markdown("---")
+
+        # Check if the user selects the same team for both
+        if team_1 == team_2:
+            st.warning("Warning: You have selected the same team for both Team 1 and Team 2. Please choose 2 different teams.")
+        else:
+            df_team_1 = df_Full_Selection_Data[(df_Full_Selection_Data['game_week'] == selected_game_week) 
+                                            & (df_Full_Selection_Data['entry_name'] == team_1)]
+            
+            df_team_2 = df_Full_Selection_Data[(df_Full_Selection_Data['game_week'] == selected_game_week) 
+                                            & (df_Full_Selection_Data['entry_name'] == team_2)]
+            
+            similarity, similar_df, only_df1, only_df2 = calculate_similarity_score(df_team_1, df_team_2)
+
+            # display teams
+            st.markdown(f"<p class='medium-font'>{team_1} vs {team_2} | Similarity Score: {similarity}%</p>", unsafe_allow_html=True)
+
+            # List of mysterious explanations
+            mystery_lines = [
+                "~ Calculated by the FPL wizards at the break of dawn. 🧙‍♂️",
+                "~ Derived from the Sun, the Moon and Football Stars... ✨",
+                "~ Forged in the fires of forgotten Puskas Award Winners. 🔥💀",
+                "~ Friends are like mirrors 🪞, they reflect who we are and help us grow in ways we never imagined."
+            ]
+            # Randomly choose one explanation
+            st.markdown(f'<p class="creator">{random.choice(mystery_lines)}</p>', unsafe_allow_html=True)
+
+            st.markdown("")
+            st.subheader('Similar Players')
+            st.dataframe(cleanse_similar_df(similar_df, team_1, team_2))
+
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader(f'Players only in {team_1}')
+                st.dataframe(cleanse_onlydf(only_df1))
+            with col2:
+                st.subheader(f'Players only in {team_2}')
+                st.dataframe(cleanse_onlydf(only_df2))
+
+            st.markdown("---")
+                                                          
 else:
     home()

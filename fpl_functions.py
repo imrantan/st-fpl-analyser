@@ -12,6 +12,8 @@ warnings.filterwarnings("ignore")
 pd.set_option('display.max_columns', None)
 tqdm.pandas()
 
+### START OF API RELATED FUNCTIONS ###
+
 # Constants
 BASE_URL = 'https://fantasy.premierleague.com/api/'
 
@@ -227,3 +229,141 @@ def run_api_extraction(game_week, league_id):
     print(f"Elapsed time: {elapsed_time_formatted}")
     
     return league_name, hist_teams_data, full_selection_data, all_transfers, df_transfers_in_out
+
+### END OF API RELATED FUNCTIONS ###
+
+
+
+### START OF ANALYTICAL FUNCTIONS ###
+
+def cleanse_similar_df(df, team_1, team_2):
+    """
+    Format the table to display all the players that are similar between the 2 teams.
+    """
+    if df.empty:
+        return pd.DataFrame(columns=['Player ID', 'Player Name',            
+                                     f'{team_1} Selection', f'{team_2} Selection',            
+                                     f'Captained by {team_1}', f'Captained by {team_2}',             
+                                     f'Vice-capt by {team_1}', f'Vice-capt by {team_2}'
+                                     ])
+
+    # make a copy
+    similar_df = df.copy()
+
+    similar_df = similar_df[['player_id', 'web_name_1', 'position_1', 'position_2', 
+                         'is_captain_1', 'is_captain_2', 'is_vice_captain_1', 'is_vice_captain_2']]
+ 
+    # Assuming your dataframe is named 'df'
+    columns_to_replace = ['is_captain_1', 'is_captain_2', 'is_vice_captain_1', 'is_vice_captain_2']
+
+    # Replace True with 'Yes' and False with 'No' in the specified columns
+    similar_df[columns_to_replace] = similar_df[columns_to_replace].replace({True: 'Yes', False: 'No'})
+
+    # Replace values based on the condition
+    columns_to_modify = ['position_1', 'position_2']
+    similar_df[columns_to_modify] = similar_df[columns_to_modify].applymap(lambda x: 'Bench' if x > 11 else 'First 11')
+
+    # rename
+    similar_df.columns = ['Player ID', 'Player Name', f'{team_1} Selection', f'{team_2} Selection',
+                        f'Captained by {team_1}', f'Captained by {team_2}', f'Vice-capt by {team_1}', f'Vice-capt by {team_2}']
+    
+    # Resetting the index
+    similar_df.index += 1  # Shift the index to start from 1
+    
+    return similar_df
+
+def cleanse_onlydf(df):
+    """
+    Format the table that shows the players that are exclusive to only 1 of the teams.
+    """
+    if df.empty:
+        return pd.DataFrame(columns=['Player Name', 'Player ID', 'Selection', 'Captain', 'Vice-Captain'])
+    
+    # make a copy
+    only_df = df.copy()
+
+    # Assuming your dataframe is named 'df'
+    columns_to_replace = ['is_captain', 'is_vice_captain']
+    # Replace True with 'Yes' and False with 'No' in the specified columns
+    only_df[columns_to_replace] = only_df[columns_to_replace].replace({True: 'Yes', False: 'No'})
+
+    # Replace values based on the condition
+    columns_to_modify = ['position']
+    only_df[columns_to_modify] = only_df[columns_to_modify].applymap(lambda x: 'Bench' if x > 11 else 'First 11')
+
+    # select columns to display
+    only_df = only_df[['web_name', 'player_id', 'position','is_captain', 'is_vice_captain']]
+    # rename columns
+    only_df.columns = ['Player Name', 'Player ID', 'Selection', 'Captain', 'Vice-Captain']
+
+    # Resetting the index
+    only_df = only_df.reset_index(drop=True)
+    only_df.index += 1  # Shift the index to start from 1
+
+    return only_df
+    
+
+def calculate_similarity_score(df1, df2):
+    # Merge dataframes on player_id
+    merged = pd.merge(df1, df2, on='player_id', how='outer', suffixes=('_1', '_2'), indicator=True)
+    
+    similarity_scores = []
+    
+    for _, row in merged.iterrows():
+        if row['_merge'] == 'both':
+            if (row['is_captain_1'] == row['is_captain_2'] and 
+                row['is_vice_captain_1'] == row['is_vice_captain_2'] and
+                ((row['position_1'] < 12 and row['position_2'] < 12) or 
+                 (row['position_1'] >= 12 and row['position_2'] >= 12))):
+                score = 1.0
+                reason = "Perfect match"
+            elif (row['is_captain_1'] != row['is_captain_2'] or 
+                  row['is_vice_captain_1'] != row['is_vice_captain_2']):
+                score = 0.8
+                reason = "Captain/Vice-captain mismatch"
+            elif ((row['position_1'] < 12 and row['position_2'] >= 12) or 
+                  (row['position_1'] >= 12 and row['position_2'] < 12)):
+                score = 0.5
+                reason = "Position threshold mismatch"
+            else:
+                score = 0.0
+                reason = "No match"
+            
+            similarity_scores.append({
+                'entry_name_1': row['entry_name_1'],
+                'entry_name_2': row['entry_name_2'],
+                'web_name_1': row['web_name_1'],
+                'web_name_2': row['web_name_2'],
+                'player_id': row['player_id'],
+                'position_1': row['position_1'],
+                'position_2': row['position_2'],
+                'is_captain_1': row['is_captain_1'],
+                'is_captain_2': row['is_captain_2'],
+                'is_vice_captain_1': row['is_vice_captain_1'],
+                'is_vice_captain_2': row['is_vice_captain_2'],
+                'similarity_score': score,
+                'reason': reason
+            })
+    
+    # Create dataframe for similar and partially similar players
+    similar_df = pd.DataFrame(similarity_scores)
+    
+    # Players only in df1
+    only_df1 = merged[merged['_merge'] == 'left_only'].drop(columns=[col for col in merged.columns if col.endswith('_2')])
+    only_df1 = only_df1.rename(columns={col: col.replace('_1', '') for col in only_df1.columns})
+    
+    # Players only in df2
+    only_df2 = merged[merged['_merge'] == 'right_only'].drop(columns=[col for col in merged.columns if col.endswith('_1')])
+    only_df2 = only_df2.rename(columns={col: col.replace('_2', '') for col in only_df2.columns})
+    
+    # Calculate overall similarity score
+    total_players = len(df1)
+    if similar_df.empty:
+        overall_similarity = 0
+    else:
+        overall_similarity = (similar_df['similarity_score'].sum() / total_players) * 100
+
+    return round(overall_similarity, 2), similar_df, only_df1, only_df2
+
+
+### END OF ANALYTICAL FUNCTIONS ###
