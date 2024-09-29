@@ -38,26 +38,31 @@ st.markdown("""
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Overall League", "Individual Team Overview", "Similarity Analyser", "Home"])
+page = st.sidebar.radio("Go to", ["Overall League", 
+                                  "Individual Team Overview", 
+                                  "Similarity Analyser", 
+                                  "Transfer Statistics",
+                                  "Home"])
 
 # Sidebar filters
 st.sidebar.header('Filters')
 
 # Choose League
+league_id = st.sidebar.text_input('League ID', placeholder="Insert digits only")
 st.sidebar.write('Popular League IDs:')
 st.sidebar.write('TakGooner - 1033088')
 st.sidebar.write('IHG 24/25 - 723575')
-league_id = st.sidebar.text_input('League ID', placeholder="Insert digits only")
+st.sidebar.write('Potato Farm - 2306035')
 
 # Validate League ID
 valid_league_id = league_id.isdigit()
 
 # Load the data with caching
-@st.cache_data(ttl=28800) # every 8hrs clear cache
+@st.cache_data(ttl=14400) # every 4hrs clear cache
 def fpl_data_extraction(league_id):
-    LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = run_api_extraction(game_week=38, 
+    LEAGUE_NAME, start_event, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = run_api_extraction(game_week=38, 
                                                                                                             league_id=league_id)
-    return LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT
+    return LEAGUE_NAME, start_event, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT
 
 def home():
     """
@@ -109,10 +114,11 @@ if st.sidebar.button('Update'):
 
         # Display a spinner while the API call is being made
         with st.spinner('Loading data. This might take awhile...'):
-            LEAGUE_NAME, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = fpl_data_extraction(league_id_int)
+            LEAGUE_NAME, start_event, hist_Teams_data, Full_Selection_Data, All_Transfers, df_Transfers_IN_OUT = fpl_data_extraction(league_id_int)
 
         # Store the data in session_state to persist it across interactions
         st.session_state['LEAGUE_NAME'] = LEAGUE_NAME
+        st.session_state['start_event'] = start_event
         st.session_state['hist_Teams_data'] = hist_Teams_data # use this when computing points and comparing points historically.
         st.session_state['Full_Selection_Data'] = Full_Selection_Data # use this when analysing an individual team.
         st.session_state['All_Transfers'] = All_Transfers
@@ -126,7 +132,9 @@ if 'Full_Selection_Data' in st.session_state:
     df_Full_Selection_Data = st.session_state['Full_Selection_Data']
     df_hist_Teams_data = st.session_state['hist_Teams_data']
     df_Transfers_IN_OUT = st.session_state['df_Transfers_IN_OUT']
+    df_All_Transfers = st.session_state['All_Transfers']
     LEAGUE_NAME = st.session_state['LEAGUE_NAME']
+    start_event = st.session_state['start_event']
 
     # Game Week filter
     game_weeks = sorted(df_Full_Selection_Data['game_week'].unique().astype(int))
@@ -420,7 +428,6 @@ if 'Full_Selection_Data' in st.session_state:
             fig3 = plot_horizontal_bar(most_selected_name, "Most Selected Clubs", "Count", "Club")
             st.plotly_chart(fig3)
         
-    # Second Page - League Statistics
     elif page == "Overall League":
         st.markdown(f'<p class="big-font">League Statistics Overview - {LEAGUE_NAME}</p>', unsafe_allow_html=True)
 
@@ -698,6 +705,75 @@ if 'Full_Selection_Data' in st.session_state:
                 st.dataframe(cleanse_onlydf(only_df2))
 
             st.markdown("---")
-                                                          
+
+            # Collapsible section
+            with st.expander("View the League's Similarity Matrix"):
+                st.write("This content is hidden by default and can be expanded or collapsed.")
+                st.write("Add more content here as needed, like text, charts, or tables.")
+
+    elif page == "Transfer Statistics":
+
+        st.markdown(f'<p class="big-font">Transfer Statistics - Game Week {selected_game_week}</p>', unsafe_allow_html=True)
+
+        df_time = df_All_Transfers[['time_SG', 'entry_name', 'name_PlayerIn', 
+                                    'id_player_PlayerIn', 'web_name_PlayerIn', 'element_in_cost',
+                                    'name_PlayerOut', 'id_player_PlayerOut', 'web_name_PlayerOut', 'element_out_cost']]
+
+        # Convert 'DateTime' to pandas datetime if it's not already in datetime format
+        df_time['DateTime'] = pd.to_datetime(df_time['time_SG'])
+
+        # Extract additional time features from the DateTime column
+        df_time['Date'] = df_time['DateTime'].dt.date
+        df_time['Day of Week'] = df_time['DateTime'].dt.day_name()
+        
+        # Convert hour to 12-hour format without leading zeros and with AM/PM
+        df_time['Hour of the Day'] = df_time['DateTime'].dt.hour % 12  # Get hour in 12-hour format (0-11)
+        df_time['Hour of the Day'] = df_time['Hour of the Day'].replace(0, 12)  # Replace 0 with 12 for midnight
+        df_time['Hour of the Day'] = df_time['Hour of the Day'].astype(str) + ' ' + df_time['DateTime'].dt.strftime('%p')  # Concatenate AM/PM  # %-I removes leading zero for single-digit hours
+
+        # Arrange DayOfWeek in correct order (Monday to Sunday)
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        df_time['Day of Week'] = pd.Categorical(df_time['Day of Week'], categories=day_order, ordered=True)
+
+        # Define the correct ordering for the 12-hour format (from 12 AM to 11 PM)
+        hour_order = ['12 AM', '1 AM', '2 AM', '3 AM', '4 AM', '5 AM', '6 AM', '7 AM', 
+                    '8 AM', '9 AM', '10 AM', '11 AM', 
+                    '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', 
+                    '8 PM', '9 PM', '10 PM', '11 PM']
+
+        df_time['Hour of the Day'] = pd.Categorical(df_time['Hour of the Day'], categories=hour_order, ordered=True)
+
+        # st.dataframe(df_time)
+
+        # Streamlit app
+        st.title('Transfer Activity Chart')
+
+        # X-axis selection
+        x_axis = st.selectbox("Select X-axis", ["Date", "Day of Week", "Hour of the Day"])
+
+        # Define the metric for y-axis
+        df_time['Transfer Count'] = 1  # For each transfer, count 1 occurrence
+
+        # Group by the selected x-axis column and aggregate the count
+        if x_axis == "Date":
+            df_grouped = df_time.groupby('Date').agg({'Transfer Count': 'sum'}).reset_index()
+        elif x_axis == "Day of Week":
+            df_grouped = df_time.groupby('Day of Week').agg({'Transfer Count': 'sum'}).reset_index()
+        elif x_axis == "Hour of the Day":
+            df_grouped = df_time.groupby('Hour of the Day').agg({'Transfer Count': 'sum'}).reset_index()
+
+        # Plot the bar chart based on selected x-axis
+        fig = px.bar(df_grouped, x=df_grouped.columns[0], y='Transfer Count', 
+                    title=f"Transfers by {x_axis}", 
+                    hover_data={'Transfer Count': True},  # Show total count in hover tooltip
+                    category_orders={
+                        'Day of Week': day_order, 
+                        'Hour of the Day': hour_order
+                    } if x_axis in ["Day of Week", "Hour of the Day"] else None)
+        
+        fig.update_traces(marker_color='#00ff87')
+
+        # Display the Plotly figure in Streamlit
+        st.plotly_chart(fig)                            
 else:
     home()

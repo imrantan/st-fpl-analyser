@@ -31,9 +31,11 @@ def create_dim_teams(league_id):
     data = fetch_data(url)    
     league_name = data['league']['name']
     standings = pd.json_normalize(data['standings']['results'])
-    return standings[['id', 'player_name', 'entry', 'entry_name']], league_name
+    start_event = data['league']['start_event'] # some leagues starts from a later week
+    # standings.rename(columns={"rank": "league_rank"}, inplace=True) # rename rank column to league_rank
+    return standings[['id', 'player_name', 'entry', 'entry_name']], league_name, start_event
 
-def create_hist_teams_data(dim_teams):
+def create_hist_teams_data(dim_teams, start_event):
     hist_teams_data = pd.DataFrame()
     for entry in dim_teams['entry']:
         url = f"{BASE_URL}entry/{entry}/history"
@@ -42,14 +44,27 @@ def create_hist_teams_data(dim_teams):
             historical_standings = pd.json_normalize(data['current'])
             historical_standings['entry'] = entry
             hist_teams_data = pd.concat([hist_teams_data, historical_standings])
-    
+
+    # Ensure that the dataset only starts from the start_event gameweek
+    hist_teams_data = hist_teams_data[hist_teams_data['event']>=start_event]
     hist_teams_data = pd.merge(dim_teams, hist_teams_data, on='entry', how='left')
+
+    # Sort by 'entry_name' and 'event' to ensure proper order for cumulative sum
+    hist_teams_data = hist_teams_data.sort_values(by=['entry_name', 'event'])
+
+    # get the net points
+    hist_teams_data['gw_points'] = hist_teams_data['points'] - hist_teams_data['event_transfers_cost']
+
+    # Perform cumulative sum of 'points' within each 'entry_name' group, ordered by 'event'
+    hist_teams_data['total_points'] = hist_teams_data.groupby('entry_name')['gw_points'].cumsum()
+
     hist_teams_data['league_rank'] = hist_teams_data.groupby('event')['total_points'].rank(method='dense', ascending=False).astype(int)
+    
     return hist_teams_data
 
-def create_all_team_selections(hist_teams_data, max_gw):
+def create_all_team_selections(hist_teams_data, max_gw, start_event):
     all_team_selections = pd.DataFrame()
-    for gw in range(1, max_gw + 1):
+    for gw in range(start_event, max_gw + 1):
         for entry in hist_teams_data[hist_teams_data['event'] == gw]['entry']:
             url = f"{BASE_URL}entry/{entry}/event/{gw}/picks/"
             data = fetch_data(url)
@@ -73,9 +88,9 @@ def create_all_team_selections(hist_teams_data, max_gw):
                 all_team_selections = pd.concat([all_team_selections, team_selection])
     return all_team_selections
 
-def create_all_gw_data(max_gw):
+def create_all_gw_data(max_gw, start_event):
     all_gw_data = pd.DataFrame()
-    for gw in range(1, max_gw + 1):
+    for gw in range(start_event, max_gw + 1):
         url = f"{BASE_URL}event/{gw}/live/"
         data = fetch_data(url)
         if data:
@@ -116,9 +131,9 @@ def merge_data(player_data, all_gw_data, all_team_selections, dim_teams):
     full_selection_data['points_earned'] = full_selection_data['multiplier'] * full_selection_data['total_points']
     return full_selection_data
 
-def check_data_consistency(dim_teams, hist_teams_data, full_selection_data, max_gw):
+def check_data_consistency(dim_teams, hist_teams_data, full_selection_data, max_gw, start_event):
     total_errors = 0
-    for gw in range(1, max_gw + 1):
+    for gw in range(start_event, max_gw + 1):
         print(f'\033[1mChecking for Game Week {gw} now...\033[0m')
         error_counter = 0
         for entry in dim_teams['entry']:
@@ -143,7 +158,7 @@ def check_data_consistency(dim_teams, hist_teams_data, full_selection_data, max_
             print(f'Checking done for Game Week {gw}.')
     return total_errors
 
-def get_all_transfers(dim_teams, max_gw):
+def get_all_transfers(dim_teams, max_gw, start_event):
     all_transfers = pd.DataFrame()
     for entry in dim_teams['entry']:
         url = f"{BASE_URL}entry/{entry}/transfers/"
@@ -152,7 +167,9 @@ def get_all_transfers(dim_teams, max_gw):
             df_transfers = pd.json_normalize(data)
             all_transfers = pd.concat([all_transfers, df_transfers])
     
-    all_transfers = all_transfers[all_transfers['event'] <= max_gw]
+    all_transfers = all_transfers[(all_transfers['event'] <= max_gw) 
+                                  & (all_transfers['event'] >= start_event)]
+
     all_transfers['element_in_cost'] = all_transfers['element_in_cost'] / 10
     all_transfers['element_out_cost'] = all_transfers['element_out_cost'] / 10
     all_transfers['time'] = pd.to_datetime(all_transfers['time'])
@@ -165,6 +182,7 @@ def get_all_transfers(dim_teams, max_gw):
     return all_transfers
 
 def process_transfers(all_transfers, dim_teams, player_data, hist_teams_data, all_gw_data):
+
     all_transfers = pd.merge(all_transfers, dim_teams, on='entry', how='left', suffixes=('_Team', '_Transfer'))
     all_transfers = pd.merge(all_transfers, player_data, left_on='element_in', right_on='id_player', how='left', suffixes=('_Team', '_PlayerIn'))
     all_transfers = pd.merge(all_transfers, player_data, left_on='element_out', right_on='id_player', how='left', suffixes=('_PlayerIn', '_PlayerOut'))
@@ -194,7 +212,7 @@ def process_transfers(all_transfers, dim_teams, player_data, hist_teams_data, al
     all_gw_data_lite = all_gw_data[['game_week', 'player_id', 'total_points']]
     df_transfers_in_out = pd.merge(df_transfers_in_out, all_gw_data_lite, left_on=['event', 'id_player'], right_on=['game_week', 'player_id'], how='left')
     
-    return df_transfers_in_out
+    return all_transfers, df_transfers_in_out
 
 def run_api_extraction(game_week, league_id):
     start_time = datetime.datetime.now()
@@ -202,22 +220,22 @@ def run_api_extraction(game_week, league_id):
     
     print(f"EXTRACTING DATA UP TO GAME WEEK {game_week}")
     
-    dim_teams, league_name = create_dim_teams(league_id)
+    dim_teams, league_name, start_event = create_dim_teams(league_id)
     if dim_teams is None:
         return None, None, None, None, None
     
-    hist_teams_data = create_hist_teams_data(dim_teams)
-    all_team_selections = create_all_team_selections(hist_teams_data, game_week)
-    all_gw_data = create_all_gw_data(game_week)
+    hist_teams_data = create_hist_teams_data(dim_teams, start_event)
+    all_team_selections = create_all_team_selections(hist_teams_data, game_week, start_event)
+    all_gw_data = create_all_gw_data(game_week, start_event)
     player_data = get_player_info()
     
     full_selection_data = merge_data(player_data, all_gw_data, all_team_selections, dim_teams)
     
-    total_errors = check_data_consistency(dim_teams, hist_teams_data, full_selection_data, game_week)
+    total_errors = check_data_consistency(dim_teams, hist_teams_data, full_selection_data, game_week, start_event)
     print(f"Total errors found: {total_errors}")
     
-    all_transfers = get_all_transfers(dim_teams, game_week)
-    df_transfers_in_out = process_transfers(all_transfers, dim_teams, player_data, hist_teams_data, all_gw_data)
+    all_transfers = get_all_transfers(dim_teams, game_week, start_event)
+    all_transfers, df_transfers_in_out = process_transfers(all_transfers, dim_teams, player_data, hist_teams_data, all_gw_data)
     
     end_time = datetime.datetime.now()
     print(f"Code ended at: {end_time}")
@@ -228,7 +246,7 @@ def run_api_extraction(game_week, league_id):
     elapsed_time_formatted = f"{hours:02}:{minutes:02}:{seconds:02}"
     print(f"Elapsed time: {elapsed_time_formatted}")
     
-    return league_name, hist_teams_data, full_selection_data, all_transfers, df_transfers_in_out
+    return league_name, start_event, hist_teams_data, full_selection_data, all_transfers, df_transfers_in_out
 
 ### END OF API RELATED FUNCTIONS ###
 
